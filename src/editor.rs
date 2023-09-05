@@ -15,6 +15,7 @@ pub struct Editor {
     should_quit: bool,
     terminal: Terminal,
     cursor_position: Position,
+    offset: Position,
     document: Document,
 }
 
@@ -44,6 +45,7 @@ impl Editor {
             should_quit: false,
             terminal: Terminal::default().expect("Failed to initialize terminal"),
             cursor_position: Position::default(),
+            offset: Position::default(),
             document,
         }
     }
@@ -104,6 +106,22 @@ impl Editor {
         }
         self.cursor_position = Position { x, y }
     }
+    fn scroll(&mut self) {
+        let Position { x, y } = self.cursor_position;
+        let width = self.terminal.size().width as usize;
+        let height = self.terminal.size().height as usize;
+        let mut offset = &mut self.offset;
+        if y < offset.y {
+            offset.y = y;
+        } else if y >= offset.y.saturating_add(height) {
+            offset.y = offset.y.saturating_sub(height).saturating_add(1)
+        }
+        if x < offset.x {
+            offset.x = x;
+        } else if x >= offset.x.saturating_add(width) {
+            offset.x = offset.x.saturating_sub(width).saturating_add(1)
+        }
+    }
     fn draw_welcome_message(&self) {
         let mut welcome_message = format!("Hecto editor -- version {}\r", VERSION);
         let width = self.terminal.size().width as usize;
@@ -115,8 +133,9 @@ impl Editor {
         println!("{}\r", welcome_message);
     }
     pub fn draw_row(&self, row: &Row) {
-        let start = 0;
-        let end = self.terminal.size().width as usize;
+        let width = self.terminal.size().width as usize;
+        let start = self.offset.x;
+        let end = self.offset.x + width;
         let row = row.render(start, end);
         println!("{}\r", row);
     }
@@ -124,7 +143,7 @@ impl Editor {
         let height = self.terminal.size().height;
         for terminal_row in 0..height - 1 {
             Terminal::clear_current_line();
-            if let Some(row) = self.document.row(terminal_row as usize) {
+            if let Some(row) = self.document.row(terminal_row as usize + self.offset.y) {
                 self.draw_row(row)
             } else if self.document.is_empty() && terminal_row == height / 3 {
                 self.draw_welcome_message();
