@@ -1,9 +1,11 @@
 use crate::Row;
 use crate::{Document, Terminal};
 use std::env;
+use termion::color;
 use termion::event::Key;
 
 const VERSION: &str = env!("CARGO_PKG_VERSION");
+const STATUS_BG_COLOR: color::Rgb = color::Rgb(239, 239, 239);
 
 #[derive(Default)]
 pub struct Position {
@@ -194,6 +196,14 @@ impl Editor {
                 println!("~\r");
             }
         }
+    }
+    fn draw_status_bar(&self) {
+        let spaces = " ".repeat(self.terminal.size().width as usize);
+        println!("{}\r", spaces);
+        Terminal::reset_bg_color();
+    }
+    fn draw_message_bar(&self) {
+        Terminal::clear_current_line();
     }
 }
 
